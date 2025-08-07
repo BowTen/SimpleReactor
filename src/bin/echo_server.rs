@@ -1,5 +1,5 @@
 use log::info;
-use simple_reactor::{Buffer, Server, SocketRemote, TcpConnection};
+use simple_reactor::{Buffer, Server, SocketRemote, TcpConnection, UdpSocket};
 use std::sync::Arc;
 
 fn message_callback(
@@ -25,6 +25,21 @@ fn connection_callback(remote: Arc<SocketRemote<TcpConnection>>, is_connected: b
     }
 }
 
+fn datagram_callback(
+    remote: Arc<SocketRemote<UdpSocket>>,
+    data: &mut [u8],
+    addr: std::net::SocketAddr,
+    _receive_time: std::time::Instant,
+) {
+    let content = String::from_utf8_lossy(data);
+    info!(
+        "Received datagram from {}: {}",
+        addr,
+        content
+    );
+    remote.send(addr, data);
+}
+
 fn main() {
     env_logger::Builder::from_default_env()
         // .filter_level(log::LevelFilter::Info)
@@ -32,11 +47,12 @@ fn main() {
     info!("env_logger inited");
 
     let addr = "127.0.0.1:8888".to_string();
-    let server = Server::new(
+    let server = Server::tcp_udp_server(
         addr.clone(),
         4,
         Arc::new(message_callback),
         Arc::new(connection_callback),
+        Arc::new(datagram_callback),
     );
     server.run();
 }

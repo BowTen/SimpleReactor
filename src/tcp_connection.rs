@@ -1,4 +1,4 @@
-use std::{io::Write, sync::Arc};
+use std::{io::Write, sync::{atomic::AtomicBool, Arc}};
 
 use log::{error, trace, warn};
 use mio::{Interest, Waker, net::TcpStream};
@@ -6,7 +6,7 @@ use mio::{Interest, Waker, net::TcpStream};
 use crate::{
     Buffer, ReactorSocket, SocketRemote,
     callbacks::{ConnectionCallback, MessageCallback},
-    channel::Sender,
+    reactor_channel::Sender,
     reactor::ReactorSignal,
 };
 
@@ -21,6 +21,7 @@ pub struct TcpConnection {
     remote: Option<Arc<SocketRemote<TcpConnection>>>,
     interest: mio::Interest,
     poll_token: Option<mio::Token>,
+    pub is_established: Arc<AtomicBool>,
 }
 
 impl TcpConnection {
@@ -43,6 +44,7 @@ impl TcpConnection {
             remote: None,
             interest,
             poll_token: None,
+            is_established: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -166,8 +168,10 @@ impl ReactorSocket for TcpConnection {
         self.output_buffer.append(data);
     }
 
-    fn handle_connection(&self, is_connected: bool) {
-        (self.connection_callback)(self.remote().clone(), is_connected);
+    fn handle_establish(&self, is_established: bool) {
+        self.is_established
+            .store(is_established, std::sync::atomic::Ordering::Relaxed);
+        (self.connection_callback)(self.remote().clone(), is_established);
     }
 
     fn poll_token(&self) -> Option<mio::Token> {
@@ -182,11 +186,16 @@ impl ReactorSocket for TcpConnection {
             token,
             self.signal_sender.clone(),
             self.waker.clone(),
+            self.is_established.clone(),
         )));
     }
 
     fn send(&mut self, _addr: std::net::SocketAddr, _data: &[u8]) -> std::io::Result<usize> {
         // TCP does not support send to specific address
         panic!("TCP connection does not support send to specific address");
+    }
+
+    fn is_established(&self) -> bool {
+        self.is_established.load(std::sync::atomic::Ordering::Relaxed)
     }
 }

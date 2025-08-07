@@ -14,7 +14,7 @@ where
     S: crate::ReactorSocket + 'static,
 {
     pub fn new(sock_capacity: usize) -> Self {
-        let (_, receiver) = crate::channel::channel();
+        let (_, receiver) = crate::reactor_channel::channel();
         let reactor = Reactor::<S>::new(sock_capacity, receiver);
         let reactor_remote = reactor.get_remote();
         EventLoopThread {

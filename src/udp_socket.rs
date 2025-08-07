@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::{atomic::AtomicBool, Arc}};
 
 use log::error;
 use mio::{Interest, Waker};
 
-use crate::{SocketRemote, callbacks::DatagramCallback, channel::Sender, reactor::ReactorSignal};
+use crate::{SocketRemote, callbacks::DatagramCallback, reactor_channel::Sender, reactor::ReactorSignal};
 
 pub struct UdpSocket {
     socket: mio::net::UdpSocket,
@@ -13,6 +13,7 @@ pub struct UdpSocket {
     waker: Arc<Waker>,
     remote: Option<Arc<SocketRemote<Self>>>,
     poll_token: Option<mio::Token>,
+    pub is_established: Arc<AtomicBool>,
 }
 
 impl UdpSocket {
@@ -30,6 +31,7 @@ impl UdpSocket {
             waker,
             remote: None,
             poll_token: None,
+            is_established: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -43,8 +45,9 @@ impl UdpSocket {
 
 impl crate::ReactorSocket for UdpSocket {
     type Socket = mio::net::UdpSocket;
-    fn handle_connection(&self, _is_connected: bool) {
-        // nothing to do here for UDP
+    fn handle_establish(&self, is_established: bool) {
+        self.is_established
+            .store(is_established, std::sync::atomic::Ordering::Relaxed);
     }
 
     fn handle_event(&mut self, event: &mio::event::Event, receive_time: std::time::Instant) {
@@ -86,10 +89,11 @@ impl crate::ReactorSocket for UdpSocket {
         self.poll_token = Some(token);
         self.remote = Some(Arc::new(SocketRemote::new(
             self.socket.local_addr().unwrap(),
-            self.socket.peer_addr().unwrap(),
+            SocketAddr::from(([0, 0, 0, 0], 0)),
             token,
             self.signal_sender.clone(),
             self.waker.clone(),
+            self.is_established.clone(),
         )));
     }
 
@@ -109,5 +113,9 @@ impl crate::ReactorSocket for UdpSocket {
 
     fn send(&mut self, addr: std::net::SocketAddr, data: &[u8]) -> std::io::Result<usize> {
         self.socket.send_to(data, addr)
+    }
+
+    fn is_established(&self) -> bool {
+        self.is_established.load(std::sync::atomic::Ordering::Relaxed)
     }
 }

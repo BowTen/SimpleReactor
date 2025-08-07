@@ -6,7 +6,8 @@ pub trait ReactorSocket: Send {
     fn handle_event(&mut self, event: &mio::event::Event, receive_time: std::time::Instant);
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize>;
     fn stash_output(&mut self, data: &[u8]);
-    fn handle_connection(&self, is_connected: bool);
+    fn handle_establish(&self, is_established: bool);
+    fn is_established(&self) -> bool;
     fn poll_token(&self) -> Option<mio::Token>;
     fn set_poll_token(&mut self, token: mio::Token);
     fn send(&mut self, addr: std::net::SocketAddr, data: &[u8]) -> std::io::Result<usize>;

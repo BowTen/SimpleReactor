@@ -4,7 +4,7 @@ use log::{error, info, trace, warn};
 use mio::{Events, Poll, Token, Waker};
 use slab::Slab;
 
-use crate::{ReactorRemote, channel::Receiver};
+use crate::{ReactorRemote, reactor_channel::Receiver};
 
 pub enum ReactorSignal<S>
 where
@@ -128,7 +128,7 @@ where
             return None;
         }
         self.sockets[token.0].set_poll_token(token);
-        self.sockets[token.0].handle_connection(true);
+        self.sockets[token.0].handle_establish(true);
         Some(token)
     }
 
@@ -145,7 +145,7 @@ where
         {
             error!("Failed to deregister socket");
         }
-        self.sockets[token.0].handle_connection(false);
+        self.sockets[token.0].handle_establish(false);
         self.sockets.remove(token.0);
     }
 

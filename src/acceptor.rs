@@ -1,3 +1,6 @@
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+
 use crate::callbacks::{ConnectionCallback, MessageCallback};
 use crate::{EventLoopThreadPool, ReactorSocket, TcpConnection};
 use log::{error, trace};
@@ -10,6 +13,7 @@ pub struct Acceptor {
     connection_callback: ConnectionCallback,
     message_callback: MessageCallback,
     poll_token: Option<mio::Token>,
+    is_established: Arc<AtomicBool>,
 }
 
 impl Acceptor {
@@ -25,6 +29,7 @@ impl Acceptor {
             connection_callback,
             message_callback,
             poll_token: None,
+            is_established: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -89,10 +94,12 @@ impl ReactorSocket for Acceptor {
         error!("Acceptor just read")
     }
 
-    fn handle_connection(&self, is_connected: bool) {
+    fn handle_establish(&self, is_established: bool) {
+        self.is_established
+            .store(is_established, std::sync::atomic::Ordering::Relaxed);
         trace!(
             "Acceptor connection status: {}",
-            if is_connected { "ON" } else { "OFF" }
+            if is_established { "ON" } else { "OFF" }
         );
     }
 
@@ -115,5 +122,9 @@ impl ReactorSocket for Acceptor {
 
     fn send(&mut self, _addr: std::net::SocketAddr, _data: &[u8]) -> std::io::Result<usize> {
         panic!("Invalid call")
+    }
+
+    fn is_established(&self) -> bool {
+        self.is_established.load(std::sync::atomic::Ordering::Relaxed)
     }
 }

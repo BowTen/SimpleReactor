@@ -30,7 +30,7 @@ pub use udp_socket::UdpSocket;
 pub mod buffer;
 pub use buffer::Buffer;
 
-pub mod channel;
+pub mod reactor_channel;
 
 pub mod reactor_remote;
 pub use reactor_remote::ReactorRemote;

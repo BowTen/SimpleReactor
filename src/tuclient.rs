@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use crate::callbacks::{ConnectionCallback, DatagramCallback, MessageCallback};
-use crate::channel::channel;
+use crate::reactor_channel::channel;
 use crate::{EventLoopThread, Reactor, ReactorSocket, SocketRemote, TcpConnection, UdpSocket};
 
 pub struct Client<S>
@@ -32,6 +32,7 @@ impl Client<UdpSocket> {
         let mut reactor = Reactor::<UdpSocket>::new(2, receiver);
         let waker = reactor.get_waker();
         let socket = UdpSocket::new(udp_socket, datagram_callback, sender.clone(), waker.clone());
+        let socket_status = socket.is_established.clone();
         let token = reactor.register(socket).unwrap();
         let event_loop_thread = EventLoopThread::with_reactor(reactor);
         Self {
@@ -42,11 +43,12 @@ impl Client<UdpSocket> {
                 token,
                 sender,
                 waker,
+                socket_status,
             ),
         }
     }
 
-    pub fn send(&self, addr: SocketAddr, data: &[u8]) {
+    pub fn send(&self, addr: SocketAddr, data: &[u8]) -> bool {
         self.remote.send(addr, data)
     }
 }
@@ -71,15 +73,16 @@ impl Client<TcpConnection> {
             sender.clone(),
             waker.clone(),
         );
+        let socket_status = socket.is_established.clone();
         let token = reactor.register(socket).unwrap();
         let event_loop_thread = EventLoopThread::with_reactor(reactor);
         Self {
             event_loop_thread,
-            remote: SocketRemote::new(local_addr, peer_addr, token, sender, waker),
+            remote: SocketRemote::new(local_addr, peer_addr, token, sender, waker, socket_status),
         }
     }
 
-    pub fn write(&self, data: &[u8]) {
+    pub fn write(&self, data: &[u8]) -> bool {
         self.remote.write(data)
     }
 }

@@ -29,7 +29,7 @@ fn main() {
     info!("env_logger inited");
 
     let addr = "127.0.0.1:8888".to_string();
-    let server = Server::new(
+    let server = Server::tcp_server(
         addr.clone(),
         4,
         Arc::new(message_callback),

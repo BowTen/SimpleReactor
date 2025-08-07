@@ -3,7 +3,7 @@ use std::sync::Arc;
 use log::trace;
 use mio::Waker;
 
-use crate::{ReactorSocket, channel::Sender, reactor::ReactorSignal};
+use crate::{ReactorSocket, reactor_channel::Sender, reactor::ReactorSignal};
 
 pub struct ReactorRemote<S>
 where
