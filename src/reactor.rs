@@ -1,10 +1,25 @@
-use std::{net::SocketAddr, sync::Arc, usize};
+use std::{
+    net::SocketAddr,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
+    thread::ThreadId,
+    usize,
+};
 
 use log::{error, info, trace, warn};
 use mio::{Events, Poll, Token, Waker};
 use slab::Slab;
 
-use crate::{ReactorRemote, reactor_channel::Receiver};
+use crate::{
+    ReactorRemote,
+    reactor_channel::{Receiver, Sender},
+};
+
+pub fn u64_current_thread_id() -> u64 {
+    unsafe { std::mem::transmute::<ThreadId, u64>(std::thread::current().id()) }
+}
 
 pub enum ReactorSignal<S>
 where
@@ -44,34 +59,42 @@ where
     signal_receiver: Receiver<ReactorSignal<S>>,
     quit: bool,
     waker: Arc<Waker>,
+    thread_id: Arc<AtomicU64>,
 }
 
 impl<S> Reactor<S>
 where
     S: crate::ReactorSocket,
 {
-    pub fn new(sock_capacity: usize, signal_receiver: Receiver<ReactorSignal<S>>) -> Self {
+    pub fn new(sock_capacity: usize) -> Self {
         let poll = Poll::new().unwrap();
         let waker = Arc::new(Waker::new(poll.registry(), Token(usize::MAX)).unwrap());
         Reactor {
             poll,
             events: Events::with_capacity(1024),
             sockets: Slab::with_capacity(sock_capacity),
-            signal_receiver,
+            signal_receiver: Receiver::new(Arc::new(Mutex::new(Vec::new()))),
             quit: false,
             waker,
+            thread_id: Arc::new(AtomicU64::new(u64::MAX / 2)),
         }
     }
 
     pub fn get_remote(&self) -> ReactorRemote<S> {
-        ReactorRemote::new(self.signal_receiver.get_sender(), Arc::clone(&self.waker))
+        ReactorRemote::new(self.get_sender())
     }
 
-    pub fn get_waker(&self) -> Arc<Waker> {
-        Arc::clone(&self.waker)
+    pub fn get_sender(&self) -> Sender<ReactorSignal<S>> {
+        Sender::new(
+            self.signal_receiver.queue.clone(),
+            self.waker.clone(),
+            self.thread_id.clone(),
+        )
     }
 
     pub fn run(mut self) {
+        self.thread_id
+            .store(u64_current_thread_id(), Ordering::Relaxed);
         // 运行事件循环
         while !self.quit {
             self.poll

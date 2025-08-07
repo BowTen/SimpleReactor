@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
 
 use crate::callbacks::{ConnectionCallback, DatagramCallback, MessageCallback};
-use crate::reactor_channel::channel;
 use crate::{EventLoopThread, Reactor, ReactorSocket, SocketRemote, TcpConnection, UdpSocket};
 
 pub struct Client<S>
@@ -28,10 +27,9 @@ where
 impl Client<UdpSocket> {
     pub fn new(udp_socket: mio::net::UdpSocket, datagram_callback: DatagramCallback) -> Self {
         let local_addr = udp_socket.local_addr().unwrap();
-        let (sender, receiver) = channel();
-        let mut reactor = Reactor::<UdpSocket>::new(2, receiver);
-        let waker = reactor.get_waker();
-        let socket = UdpSocket::new(udp_socket, datagram_callback, sender.clone(), waker.clone());
+        let mut reactor = Reactor::<UdpSocket>::new(2);
+        let sender = reactor.get_sender();
+        let socket = UdpSocket::new(udp_socket, datagram_callback, sender.clone());
         let socket_status = socket.is_established.clone();
         let token = reactor.register(socket).unwrap();
         let event_loop_thread = EventLoopThread::with_reactor(reactor);
@@ -42,7 +40,6 @@ impl Client<UdpSocket> {
                 SocketAddr::from(([0, 0, 0, 0], 0)),
                 token,
                 sender,
-                waker,
                 socket_status,
             ),
         }
@@ -59,9 +56,8 @@ impl Client<TcpConnection> {
         message_callback: MessageCallback,
         connection_callback: ConnectionCallback,
     ) -> Self {
-        let (sender, receiver) = channel();
-        let mut reactor = Reactor::<TcpConnection>::new(2, receiver);
-        let waker = reactor.get_waker();
+        let mut reactor = Reactor::<TcpConnection>::new(2);
+        let sender = reactor.get_sender();
         let stream = mio::net::TcpStream::connect(addr.parse().unwrap()).unwrap();
         let local_addr = stream.local_addr().unwrap();
         let peer_addr = stream.peer_addr().unwrap();
@@ -71,14 +67,13 @@ impl Client<TcpConnection> {
             message_callback,
             mio::Interest::READABLE,
             sender.clone(),
-            waker.clone(),
         );
         let socket_status = socket.is_established.clone();
         let token = reactor.register(socket).unwrap();
         let event_loop_thread = EventLoopThread::with_reactor(reactor);
         Self {
             event_loop_thread,
-            remote: SocketRemote::new(local_addr, peer_addr, token, sender, waker, socket_status),
+            remote: SocketRemote::new(local_addr, peer_addr, token, sender, socket_status),
         }
     }
 

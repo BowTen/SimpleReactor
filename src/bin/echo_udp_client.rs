@@ -1,9 +1,7 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use log::info;
-use simple_reactor::{
-    Client, SocketRemote, UdpSocket
-};
+use simple_reactor::{Client, SocketRemote, UdpSocket};
 use std::io::{self, Write};
 
 fn datagram_callback(
@@ -13,11 +11,7 @@ fn datagram_callback(
     _receive_time: std::time::Instant,
 ) {
     let content = String::from_utf8_lossy(data);
-    println!(
-        "Received datagram from {}: {}",
-        addr,
-        content
-    );
+    println!("Received datagram from {}: {}", addr, content);
 }
 
 fn main() {
@@ -29,7 +23,8 @@ fn main() {
     let addr = "127.0.0.1:0".to_string();
     let server = "127.0.0.1:8888".to_string();
     let mut client = Client::<UdpSocket>::new(
-        mio::net::UdpSocket::bind(addr.clone().parse().unwrap()).expect("Failed to bind UDP socket"),
+        mio::net::UdpSocket::bind(addr.clone().parse().unwrap())
+            .expect("Failed to bind UDP socket"),
         Arc::new(datagram_callback),
     );
     client.listen();

@@ -6,7 +6,6 @@ use crate::{
     Acceptor, EventLoopThread, EventLoopThreadPool, Reactor, ReactorRemote, ReactorSocket,
     TcpConnection, UdpSocket,
     callbacks::{ConnectionCallback, DatagramCallback, MessageCallback},
-    reactor::ReactorSignal,
 };
 
 pub struct Server {
@@ -32,8 +31,7 @@ impl Server {
             warn!("Number of threads is 0, using 1 instead");
             num_threads = 1;
         }
-        let (_, receiver) = crate::reactor_channel::channel::<ReactorSignal<Acceptor>>();
-        let reactor = Reactor::new(2, receiver);
+        let reactor = Reactor::new(2);
         Server {
             addr,
             acceptor_reactor: Some(reactor),
@@ -48,8 +46,7 @@ impl Server {
     }
 
     pub fn udp_server(addr: String, datagram_callback: DatagramCallback) -> Self {
-        let (_, receiver) = crate::reactor_channel::channel::<ReactorSignal<UdpSocket>>();
-        let reactor = Reactor::new(2, receiver);
+        let reactor = Reactor::new(2);
         Server {
             addr,
             acceptor_reactor: None,
@@ -74,10 +71,8 @@ impl Server {
             warn!("Number of threads is 0, using 1 instead");
             num_threads = 1;
         }
-        let (_, acceptor_receiver) = crate::reactor_channel::channel::<ReactorSignal<Acceptor>>();
-        let acceptor_reactor = Reactor::new(2, acceptor_receiver);
-        let (_, udp_receiver) = crate::reactor_channel::channel::<ReactorSignal<UdpSocket>>();
-        let udp_reactor = Reactor::new(2, udp_receiver);
+        let acceptor_reactor = Reactor::new(2);
+        let udp_reactor = Reactor::new(2);
         Server {
             addr,
             acceptor_reactor: Some(acceptor_reactor),
@@ -106,13 +101,11 @@ impl Server {
 
     fn get_udp_reactor(mut self) -> Reactor<UdpSocket> {
         let signal_sender = self.udp_reactor.as_mut().unwrap().get_remote().get_sender();
-        let waker = self.udp_reactor.as_mut().unwrap().get_waker();
         let socket = mio::net::UdpSocket::bind(self.addr.parse().unwrap()).unwrap();
         let udp_socket = UdpSocket::new(
             socket,
             self.datagram_callback.as_ref().unwrap().clone(),
             signal_sender,
-            waker,
         );
         self.udp_reactor.as_mut().unwrap().register(udp_socket);
         println!("UDP Server is running on {}", self.addr);
@@ -122,13 +115,11 @@ impl Server {
     pub fn run(mut self) {
         if self.tcp && self.udp {
             let signal_sender = self.udp_reactor.as_mut().unwrap().get_remote().get_sender();
-            let waker = self.udp_reactor.as_mut().unwrap().get_waker();
             let socket = mio::net::UdpSocket::bind(self.addr.parse().unwrap()).unwrap();
             let udp_socket = UdpSocket::new(
                 socket,
                 self.datagram_callback.as_ref().unwrap().clone(),
                 signal_sender,
-                waker,
             );
             self.udp_reactor.as_mut().unwrap().register(udp_socket);
             println!("UDP Server is running on {}", self.addr);

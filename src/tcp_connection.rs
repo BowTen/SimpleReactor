@@ -1,13 +1,16 @@
-use std::{io::Write, sync::{atomic::AtomicBool, Arc}};
+use std::{
+    io::Write,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 use log::{error, trace, warn};
-use mio::{Interest, Waker, net::TcpStream};
+use mio::{Interest, net::TcpStream};
 
 use crate::{
     Buffer, ReactorSocket, SocketRemote,
     callbacks::{ConnectionCallback, MessageCallback},
-    reactor_channel::Sender,
     reactor::ReactorSignal,
+    reactor_channel::Sender,
 };
 
 pub struct TcpConnection {
@@ -17,7 +20,6 @@ pub struct TcpConnection {
     input_buffer: Buffer,
     output_buffer: Buffer,
     signal_sender: Sender<ReactorSignal<TcpConnection>>,
-    waker: Arc<Waker>,
     remote: Option<Arc<SocketRemote<TcpConnection>>>,
     interest: mio::Interest,
     poll_token: Option<mio::Token>,
@@ -31,7 +33,6 @@ impl TcpConnection {
         message_callback: MessageCallback,
         interest: mio::Interest,
         signal_sender: Sender<ReactorSignal<TcpConnection>>,
-        waker: Arc<Waker>,
     ) -> Self {
         TcpConnection {
             stream,
@@ -40,7 +41,6 @@ impl TcpConnection {
             input_buffer: Buffer::new(),
             output_buffer: Buffer::new(),
             signal_sender,
-            waker,
             remote: None,
             interest,
             poll_token: None,
@@ -185,7 +185,6 @@ impl ReactorSocket for TcpConnection {
             self.stream.peer_addr().unwrap(),
             token,
             self.signal_sender.clone(),
-            self.waker.clone(),
             self.is_established.clone(),
         )));
     }
@@ -196,6 +195,7 @@ impl ReactorSocket for TcpConnection {
     }
 
     fn is_established(&self) -> bool {
-        self.is_established.load(std::sync::atomic::Ordering::Relaxed)
+        self.is_established
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 }

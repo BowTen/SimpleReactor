@@ -1,5 +1,5 @@
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use crate::callbacks::{ConnectionCallback, MessageCallback};
 use crate::{EventLoopThreadPool, ReactorSocket, TcpConnection};
@@ -48,7 +48,6 @@ impl Acceptor {
             self.message_callback.clone(),
             Interest::READABLE,
             reactor.get_sender(),
-            reactor.get_waker(),
         );
         reactor.register(connection);
         trace!(
@@ -125,6 +124,7 @@ impl ReactorSocket for Acceptor {
     }
 
     fn is_established(&self) -> bool {
-        self.is_established.load(std::sync::atomic::Ordering::Relaxed)
+        self.is_established
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 }

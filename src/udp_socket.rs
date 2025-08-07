@@ -1,16 +1,20 @@
-use std::{net::SocketAddr, sync::{atomic::AtomicBool, Arc}};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 use log::error;
-use mio::{Interest, Waker};
+use mio::Interest;
 
-use crate::{SocketRemote, callbacks::DatagramCallback, reactor_channel::Sender, reactor::ReactorSignal};
+use crate::{
+    SocketRemote, callbacks::DatagramCallback, reactor::ReactorSignal, reactor_channel::Sender,
+};
 
 pub struct UdpSocket {
     socket: mio::net::UdpSocket,
     buffer: [u8; 65536],
     datagram_callback: DatagramCallback,
     signal_sender: Sender<ReactorSignal<Self>>,
-    waker: Arc<Waker>,
     remote: Option<Arc<SocketRemote<Self>>>,
     poll_token: Option<mio::Token>,
     pub is_established: Arc<AtomicBool>,
@@ -21,14 +25,12 @@ impl UdpSocket {
         socket: mio::net::UdpSocket,
         datagram_callback: DatagramCallback,
         signal_sender: Sender<ReactorSignal<Self>>,
-        waker: Arc<Waker>,
     ) -> Self {
         UdpSocket {
             socket,
             buffer: [0; 65536],
             datagram_callback,
             signal_sender,
-            waker,
             remote: None,
             poll_token: None,
             is_established: Arc::new(AtomicBool::new(false)),
@@ -92,7 +94,6 @@ impl crate::ReactorSocket for UdpSocket {
             SocketAddr::from(([0, 0, 0, 0], 0)),
             token,
             self.signal_sender.clone(),
-            self.waker.clone(),
             self.is_established.clone(),
         )));
     }
@@ -116,6 +117,7 @@ impl crate::ReactorSocket for UdpSocket {
     }
 
     fn is_established(&self) -> bool {
-        self.is_established.load(std::sync::atomic::Ordering::Relaxed)
+        self.is_established
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 }

@@ -32,11 +32,7 @@ fn datagram_callback(
     _receive_time: std::time::Instant,
 ) {
     let content = String::from_utf8_lossy(data);
-    info!(
-        "Received datagram from {}: {}",
-        addr,
-        content
-    );
+    info!("Received datagram from {}: {}", addr, content);
     remote.send(addr, data);
 }
 
