@@ -48,7 +48,11 @@ impl UdpSocket {
 impl crate::ReactorSocket for UdpSocket {
     type Socket = mio::net::UdpSocket;
     fn handle_establish(&self, is_established: bool) {
-        info!("UDP Socket {} {}", self.remote.as_ref().unwrap().local_addr(), ( if is_established { "ON" } else { "OFF" }));
+        info!(
+            "UDP Socket {} {}",
+            self.remote.as_ref().unwrap().local_addr(),
+            (if is_established { "ON" } else { "OFF" })
+        );
         self.is_established
             .store(is_established, std::sync::atomic::Ordering::Relaxed);
     }

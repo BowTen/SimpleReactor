@@ -35,5 +35,5 @@ pub mod reactor_channel;
 pub mod reactor_remote;
 pub use reactor_remote::ReactorRemote;
 
-pub mod tuclient;
-pub use tuclient::Client;
+pub mod client;
+pub use client::Client;

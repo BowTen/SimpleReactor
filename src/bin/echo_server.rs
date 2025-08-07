@@ -1,5 +1,7 @@
 use log::info;
-use simple_reactor::{server::ServerQuiter, Buffer, Server, SocketRemote, TcpConnection, UdpSocket};
+use simple_reactor::{
+    Buffer, Server, SocketRemote, TcpConnection, UdpSocket, server::ServerQuiter,
+};
 use std::sync::Arc;
 
 static mut SERVER_QUITER: Option<ServerQuiter> = None;
@@ -47,7 +49,7 @@ fn datagram_callback(
     info!("Received datagram from {}: {}", addr, content);
     remote.send(addr, data);
     if content.contains("KILL") {
-        unsafe { 
+        unsafe {
             if let Some(quiter) = &(*&raw const SERVER_QUITER) {
                 quiter.quit();
             }
@@ -56,8 +58,7 @@ fn datagram_callback(
 }
 
 fn main() {
-    env_logger::Builder::from_default_env()
-        .init();
+    env_logger::Builder::from_default_env().init();
     info!("env_logger inited");
 
     let addr = "127.0.0.1:8888".to_string();
@@ -69,7 +70,9 @@ fn main() {
         Arc::new(datagram_callback),
     );
 
-    unsafe { SERVER_QUITER = Some(server.get_quiter()); }
+    unsafe {
+        SERVER_QUITER = Some(server.get_quiter());
+    }
 
     server.run();
 }

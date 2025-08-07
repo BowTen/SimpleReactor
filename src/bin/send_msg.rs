@@ -3,8 +3,7 @@ use std::io::Write;
 use log::info;
 
 fn main() {
-    env_logger::Builder::from_default_env()
-        .init();
+    env_logger::Builder::from_default_env().init();
     info!("env_logger inited");
 
     let addr = "127.0.0.1:8888".to_string();
