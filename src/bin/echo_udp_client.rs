@@ -16,7 +16,6 @@ fn datagram_callback(
 
 fn main() {
     env_logger::Builder::from_default_env()
-        // .filter_level(log::LevelFilter::Info)
         .init();
     info!("env_logger inited");
 
@@ -38,7 +37,10 @@ fn main() {
                 break;
             }
             let bytes = input.trim_end().as_bytes();
-            client.send(server.clone().parse().unwrap(), bytes);
+            if !client.send(server.clone().parse().unwrap(), bytes) {
+                println!("连接断开");
+                break;
+            }
         }
     }
 

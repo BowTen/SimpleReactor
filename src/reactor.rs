@@ -241,7 +241,8 @@ where
                 }
                 Err(e) => {
                     error!("Failed to send data: {}", e);
-                    self.shutdown(token);
+                    // TODO: solve some error to shutdown
+                    // self.shutdown(token);
                 }
             }
         } else {

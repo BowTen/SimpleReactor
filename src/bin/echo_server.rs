@@ -1,6 +1,8 @@
 use log::info;
-use simple_reactor::{Buffer, Server, SocketRemote, TcpConnection, UdpSocket};
+use simple_reactor::{server::ServerQuiter, Buffer, Server, SocketRemote, TcpConnection, UdpSocket};
 use std::sync::Arc;
+
+static mut SERVER_QUITER: Option<ServerQuiter> = None;
 
 fn message_callback(
     remote: Arc<SocketRemote<TcpConnection>>,
@@ -15,6 +17,16 @@ fn message_callback(
         String::from_utf8_lossy(&content),
     );
     remote.write(&content);
+    if String::from_utf8_lossy(&content).contains("shutdown") {
+        remote.shutdown();
+    }
+    if String::from_utf8_lossy(&content).contains("KILL") {
+        unsafe {
+            if let Some(quiter) = &(*&raw const SERVER_QUITER) {
+                quiter.quit();
+            }
+        }
+    }
 }
 
 fn connection_callback(remote: Arc<SocketRemote<TcpConnection>>, is_connected: bool) {
@@ -34,11 +46,17 @@ fn datagram_callback(
     let content = String::from_utf8_lossy(data);
     info!("Received datagram from {}: {}", addr, content);
     remote.send(addr, data);
+    if content.contains("KILL") {
+        unsafe { 
+            if let Some(quiter) = &(*&raw const SERVER_QUITER) {
+                quiter.quit();
+            }
+        }
+    }
 }
 
 fn main() {
     env_logger::Builder::from_default_env()
-        // .filter_level(log::LevelFilter::Info)
         .init();
     info!("env_logger inited");
 
@@ -50,5 +68,8 @@ fn main() {
         Arc::new(connection_callback),
         Arc::new(datagram_callback),
     );
+
+    unsafe { SERVER_QUITER = Some(server.get_quiter()); }
+
     server.run();
 }

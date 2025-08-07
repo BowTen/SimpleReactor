@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
 };
 
-use log::error;
+use log::{error, info};
 use mio::Interest;
 
 use crate::{
@@ -48,6 +48,7 @@ impl UdpSocket {
 impl crate::ReactorSocket for UdpSocket {
     type Socket = mio::net::UdpSocket;
     fn handle_establish(&self, is_established: bool) {
+        info!("UDP Socket {} {}", self.remote.as_ref().unwrap().local_addr(), ( if is_established { "ON" } else { "OFF" }));
         self.is_established
             .store(is_established, std::sync::atomic::Ordering::Relaxed);
     }
@@ -67,7 +68,8 @@ impl crate::ReactorSocket for UdpSocket {
                     }
                     Err(e) => {
                         error!("Error receiving UDP packet: {}", e);
-                        self.remote().shutdown();
+                        // TODO: solve some error to shutdown
+                        // self.remote().shutdown();
                         return;
                     }
                 }

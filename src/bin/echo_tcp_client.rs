@@ -17,7 +17,6 @@ fn message_callback(
 
 fn main() {
     env_logger::Builder::from_default_env()
-        // .filter_level(log::LevelFilter::Info)
         .init();
     info!("env_logger inited");
 
@@ -38,7 +37,10 @@ fn main() {
                 break;
             }
             let bytes = input.trim_end().as_bytes();
-            client.write(bytes);
+            if !client.write(bytes) {
+                println!("连接断开");
+                break;
+            }
         }
     }
 
