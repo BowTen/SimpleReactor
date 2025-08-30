@@ -38,6 +38,15 @@ src/
     └── simple_server.rs
 ```
 
+## 模块架构
+
+### reactor 结构图
+![reactor 结构图](https://github.com/BowTen/SimpleReactor/raw/main/resources/reactor_arc.png)
+
+### server 结构图
+![server 结构图](https://github.com/BowTen/SimpleReactor/raw/main/resources/server_arc.png)
+
+
 ## TODO
 
 目前只实现了 TCP,UDP 基础的 Server 和 Client 功能，只处理了读、写事件。
